@@ -1,10 +1,10 @@
+package dogapi;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import dogapi.BreedFetcher;
 
 /**
  * A caching decorator for a BreedFetcher.
@@ -18,15 +18,14 @@ public class CachingBreedFetcher implements BreedFetcher {
     // In-memory cache from breed -> list of sub-breeds.
     private final Map<String, List<String>> cache = new HashMap<>();
 
-    // TODO: track how many times we actually hit the underlying fetcher
-    // (i.e., number of cache MISSES that invoked delegate.getSubBreeds).
+    // Number of times we've had to call the delegate (cache MISSES only).
     private int callsMade = 0;
 
     public CachingBreedFetcher(BreedFetcher delegate) {
         this.delegate = delegate;
     }
 
-    /** TODO: required by tests – return how many times the delegate was called. */
+    /** Exposed for tests: how many times the delegate has been called. */
     public int getCallsMade() {
         return callsMade;
     }
@@ -50,7 +49,7 @@ public class CachingBreedFetcher implements BreedFetcher {
         List<String> result = delegate.getSubBreeds(breed);
         callsMade++;
 
-        // Normalize and protect against mutation.
+        // Normalize null and protect against external mutation.
         if (result == null) {
             result = Collections.emptyList();
         } else {
