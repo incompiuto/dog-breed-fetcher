@@ -3,24 +3,23 @@ package dogapi;
 import java.util.List;
 
 /**
- * Interface for the service of getting sub breeds of a given dog breed.
+ * Interface for fetching sub-breeds for a given dog breed.
  */
 public interface BreedFetcher {
 
     /**
-     * Fetch the list of sub breeds for the given breed.
-     * @param breed the breed to fetch sub breeds for
-     * @return list of sub breeds for the given breed
-     * @throws BreedNotFoundException if the breed does not exist
+     * Thrown when the provided breed does not exist in the API.
      */
-    List<String> getSubBreeds(String breed);
-
-
-    // TODO Task 4: make this a checked exception and update any other code as needed.
-    // a class defined in an interface is public AND static
-    class BreedNotFoundException extends RuntimeException {
-        public BreedNotFoundException(String breed) {
-            super("Breed not found: " + breed);
+    // TODO: Make this a checked exception
+    public static class BreedNotFoundException extends Exception {
+        public BreedNotFoundException(String message) {
+            super(message);
         }
     }
+
+    /**
+     * Return a list of sub-breeds for the given breed name.
+     */
+    // TODO: Update signature to declare throws
+    java.util.List<String> getSubBreeds(String breed) throws BreedNotFoundException;
 }

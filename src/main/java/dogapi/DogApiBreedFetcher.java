@@ -10,26 +10,59 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * BreedFetcher implementation that relies on the dog.ceo API.
- * Note that all failures get reported as BreedNotFoundException
- * exceptions to align with the requirements of the BreedFetcher interface.
+ * Implementation of BreedFetcher that calls the Dog CEO API.
+ *
+ * Uses OkHttp for HTTP and Gson for JSON parsing (both are already included in pom.xml).
  */
 public class DogApiBreedFetcher implements BreedFetcher {
-    private final OkHttpClient client = new OkHttpClient();
 
-    /**
-     * Fetch the list of sub breeds for the given breed from the dog.ceo API.
-     * @param breed the breed to fetch sub breeds for
-     * @return list of sub breeds for the given breed
-     * @throws BreedNotFoundException if the breed does not exist (or if the API call fails for any reason)
-     */
+    // TODO: Implement API call to Dog CEO and parse JSON
     @Override
-    public List<String> getSubBreeds(String breed) {
-        // TODO Task 1: Complete this method based on its provided documentation
-        //      and the documentation for the dog.ceo API. You may find it helpful
-        //      to refer to the examples of using OkHttpClient from the last lab,
-        //      as well as the code for parsing JSON responses.
-        // return statement included so that the starter code can compile and run.
-        return new ArrayList<>();
+    public java.util.List<String> getSubBreeds(String breed) throws BreedNotFoundException {
+        final String url = "https://dog.ceo/api/breed/" + breed.toLowerCase() + "/list";
+
+        okhttp3.OkHttpClient client = new okhttp3.OkHttpClient();
+        okhttp3.Request request = new okhttp3.Request.Builder().url(url).get().build();
+
+        okhttp3.Response response = null;
+        try {
+            response = client.newCall(request).execute();
+
+            if (response.body() == null) {
+                throw new RuntimeException("Empty response body for " + url);
+            }
+
+            if (!response.isSuccessful()) {
+                // HTTP-level error (e.g., 404). The API also encodes errors in JSON,
+                // so we still parse the body below to check "status".
+                // We won't throw here; we'll parse and interpret the JSON status.
+            }
+
+            String body = response.body().string();
+
+            com.google.gson.JsonObject root =
+                    com.google.gson.JsonParser.parseString(body).getAsJsonObject();
+
+            String status = root.get("status").getAsString();
+            if (!"success".equals(status)) {
+                // The API uses status "error" for unknown breeds.
+                throw new BreedNotFoundException("Breed not found: " + breed);
+            }
+
+            com.google.gson.JsonArray arr = root.getAsJsonArray("message");
+            java.util.List<String> result = new java.util.ArrayList<>(arr.size());
+            for (com.google.gson.JsonElement e : arr) {
+                result.add(e.getAsString());
+            }
+            return result;
+
+        } catch (java.io.IOException ioe) {
+            // Network/IO problems are not part of the interface contract: wrap as unchecked.
+            throw new RuntimeException("Network error fetching sub-breeds for: " + breed, ioe);
+        } finally {
+            if (response != null) {
+                response.close();
+            }
+        }
     }
 }
