@@ -7,34 +7,50 @@ import java.util.*;
  */
 public class CachingBreedFetcher implements BreedFetcher {
 
+    // Underlying fetcher that actually does the work.
     private final BreedFetcher delegate;
+
+    // Simple in-memory cache from breed -> list of sub-breeds.
+    private final Map<String, List<String>> cache = new HashMap<>();
+
+    // TODO: track how many times we actually hit the underlying fetcher
+    // (i.e., the number of cache MISSES that invoked delegate.getSubBreeds).
+    private int callsMade = 0;
 
     public CachingBreedFetcher(BreedFetcher delegate) {
         this.delegate = delegate;
     }
 
-    // TODO: Add cache map
-    private final java.util.Map<String, java.util.List<String>> cache = new java.util.HashMap<>();
+    /** TODO: required by tests – return how many times the delegate was called. */
+    public int getCallsMade() {
+        return callsMade;
+    }
 
-    // TODO: Implement caching behaviour (do not cache exceptions)
     @Override
-    public java.util.List<String> getSubBreeds(String breed) throws BreedNotFoundException {
-        String key = breed.toLowerCase();
-
-        if (cache.containsKey(key)) {
-            return cache.get(key);
+    public List<String> getSubBreeds(String breed) {
+        if (breed == null) {
+            return Collections.emptyList();
         }
 
-        try {
-            java.util.List<String> fetched = delegate.getSubBreeds(breed);
-            // Store an unmodifiable copy to prevent accidental external mutation.
-            java.util.List<String> copy = java.util.Collections.unmodifiableList(
-                    new java.util.ArrayList<>(fetched));
-            cache.put(key, copy);
-            return copy;
-        } catch (BreedNotFoundException e) {
-            // Do not cache failures; allow callers to retry later.
-            throw e;
+        // Return from cache if present (cache HIT).
+        List<String> cached = cache.get(breed);
+        if (cached != null) {
+            return cached;
         }
+
+        // Cache MISS → call the underlying fetcher exactly once and count it.
+        List<String> result = delegate.getSubBreeds(breed);
+        callsMade++;
+
+        // Normalize nulls to an immutable empty list to avoid NPEs later.
+        if (result == null) {
+            result = Collections.emptyList();
+        } else {
+            // Store an unmodifiable copy to keep cache safe from external mutation.
+            result = Collections.unmodifiableList(new ArrayList<>(result));
+        }
+
+        cache.put(breed, result);
+        return result;
     }
 }
